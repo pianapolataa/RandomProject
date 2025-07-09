@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RL Car Simulation</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    label { display: block; margin-top: 10px; }
+    output { margin-left: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Car Simulator</h2>
+
+  <label>Friction: 
+    <input type="range" id="friction" min="0" max="1.0" step="0.01" value="0.7" oninput="fDisplay.value = friction.value">
+    <output id="fDisplay">0.7</output>
+  </label>
+
+  <label>Gas Sensitivity:
+    <input type="range" id="gas_sensitivity" min="0" max="2.0" step="0.01" value="0.9" oninput="gDisplay.value = gas_sensitivity.value">
+    <output id="gDisplay">0.9</output>
+  </label>
+
+  <label>Brake Sensitivity:
+    <input type="range" id="brake_sensitivity" min="0" max="2.0" step="0.01" value="0.4" oninput="bDisplay.value = brake_sensitivity.value">
+    <output id="bDisplay">0.4</output>
+  </label>
+
+  <label>Steer Sensitivity:
+    <input type="range" id="steer_sensitivity" min="0" max="0.5" step="0.01" value="0.1" oninput="sDisplay.value = steer_sensitivity.value">
+    <output id="sDisplay">0.1</output>
+  </label>
+
+  <label>Path Type:
+    <select id="path_type">
+      <option value="sine">Sine</option>
+      <option value="straight">Straight</option>
+    </select>
+  </label>
+
+  <button onclick="simulate()">Simulate</button>
+  <button id="resetBtn">Reset to Defaults</button>
+
+  <div id="plot" style="width: 700px; height: 450px; margin-top: 20px;"></div>
+
+  <script>
+    async function simulate() {
+      const friction = parseFloat(document.getElementById("friction").value);
+      const gas_sensitivity = parseFloat(document.getElementById("gas_sensitivity").value);
+      const brake_sensitivity = parseFloat(document.getElementById("brake_sensitivity").value);
+      const steer_sensitivity = parseFloat(document.getElementById("steer_sensitivity").value);
+      const path_type = document.getElementById("path_type").value;
+
+      const res = await fetch("/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          friction,
+          gas_sensitivity,
+          brake_sensitivity,
+          steer_sensitivity,
+          path_type
+        })
+      });
+
+      const data = await res.json();
+      const path = data.path;
+      const car = data.car;
+
+      Plotly.newPlot('plot', [
+        {
+          x: path.map(p => p[0]),
+          y: path.map(p => p[1]),
+          mode: 'lines',
+          name: 'Path',
+          line: { dash: 'dot', width: 2, color: 'gray' }
+        },
+        {
+          x: car.map(p => p[0]),
+          y: car.map(p => p[1]),
+          mode: 'lines+markers',
+          name: 'Car',
+          line: { color: 'blue' },
+          marker: { size: 4 }
+        }
+      ], {
+        margin: { t: 20, b: 40, l: 40, r: 20 },
+        xaxis: { title: "X" },
+        yaxis: { title: "Y", scaleanchor: "x" }
+      });
+    }
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+    // Reset inputs to defaults used in training
+    document.getElementById("friction").value = 0.7;
+    document.getElementById("fDisplay").value = 0.7;
+
+    document.getElementById("gas_sensitivity").value = 0.9;
+    document.getElementById("gDisplay").value = 0.9;
+
+    document.getElementById("brake_sensitivity").value = 0.4;
+    document.getElementById("bDisplay").value = 0.4;
+
+    document.getElementById("steer_sensitivity").value = 0.1;
+    document.getElementById("sDisplay").value = 0.1;
+
+    document.getElementById("path_type").value = "sine";
+
+    // Run simulation with default parameters
+    simulate();
+});
+  </script>
+</body>
+</html>
