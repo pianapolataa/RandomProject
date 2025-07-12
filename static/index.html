@@ -127,6 +127,21 @@
   
         idx++;
       }, 50); // update every 50 ms, adjust speed here
+      document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("friction").value = 0.7;
+      document.getElementById("fDisplay").value = 0.7;
+
+      document.getElementById("gas_sensitivity").value = 0.9;
+      document.getElementById("gDisplay").value = 0.9;
+
+      document.getElementById("brake_sensitivity").value = 0.4;
+      document.getElementById("bDisplay").value = 0.4;
+
+      document.getElementById("steer_sensitivity").value = 0.1;
+      document.getElementById("sDisplay").value = 0.1;
+
+      document.getElementById("path_type").value = "sine";
+    });
     }
   </script>  
 </body>
