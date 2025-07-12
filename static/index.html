@@ -44,13 +44,23 @@
   <div id="plot" style="width: 700px; height: 450px; margin-top: 20px;"></div>
 
   <script>
+    let animationInterval = null; // keep track of ongoing animation
+  
     async function simulate() {
+      // Cancel any ongoing animation
+      if (animationInterval) {
+        clearInterval(animationInterval);
+        animationInterval = null;
+      }
+  
+      // Fetch params
       const friction = parseFloat(document.getElementById("friction").value);
       const gas_sensitivity = parseFloat(document.getElementById("gas_sensitivity").value);
       const brake_sensitivity = parseFloat(document.getElementById("brake_sensitivity").value);
       const steer_sensitivity = parseFloat(document.getElementById("steer_sensitivity").value);
       const path_type = document.getElementById("path_type").value;
-
+  
+      // Call backend
       const res = await fetch("/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,53 +72,62 @@
           path_type
         })
       });
-
       const data = await res.json();
       const path = data.path;
       const car = data.car;
-
-      Plotly.newPlot('plot', [
+  
+      // Initialize empty traces to start with
+      const plotData = [
         {
-          x: path.map(p => p[0]),
-          y: path.map(p => p[1]),
+          x: [], y: [],
           mode: 'lines',
           name: 'Path',
           line: { dash: 'dot', width: 2, color: 'gray' }
         },
         {
-          x: car.map(p => p[0]),
-          y: car.map(p => p[1]),
+          x: [], y: [],
           mode: 'lines+markers',
           name: 'Car',
           line: { color: 'blue' },
-          marker: { size: 4 }
+          marker: { size: 6 }
         }
-      ], {
+      ];
+  
+      Plotly.newPlot('plot', plotData, {
         margin: { t: 20, b: 40, l: 40, r: 20 },
         xaxis: { title: "X" },
         yaxis: { title: "Y", scaleanchor: "x" }
       });
+  
+      let idx = 0;
+      const maxIdx = Math.max(path.length, car.length);
+  
+      animationInterval = setInterval(() => {
+        if (idx >= maxIdx) {
+          clearInterval(animationInterval);
+          animationInterval = null;
+          return;
+        }
+  
+        // Append next point for path (if available)
+        if (idx < path.length) {
+          Plotly.extendTraces('plot', {
+            x: [[path[idx][0]]],
+            y: [[path[idx][1]]]
+          }, [0]);
+        }
+  
+        // Append next point for car (if available)
+        if (idx < car.length) {
+          Plotly.extendTraces('plot', {
+            x: [[car[idx][0]]],
+            y: [[car[idx][1]]]
+          }, [1]);
+        }
+  
+        idx++;
+      }, 50); // update every 50 ms, adjust speed here
     }
-
-    document.getElementById("resetBtn").addEventListener("click", () => {
-    // Reset inputs to defaults used in training
-    document.getElementById("friction").value = 0.7;
-    document.getElementById("fDisplay").value = 0.7;
-
-    document.getElementById("gas_sensitivity").value = 0.9;
-    document.getElementById("gDisplay").value = 0.9;
-
-    document.getElementById("brake_sensitivity").value = 0.4;
-    document.getElementById("bDisplay").value = 0.4;
-
-    document.getElementById("steer_sensitivity").value = 0.1;
-    document.getElementById("sDisplay").value = 0.1;
-
-    document.getElementById("path_type").value = "sine";
-
-    // Run simulation with default parameters
-    simulate();
-});
-  </script>
+  </script>  
 </body>
 </html>
