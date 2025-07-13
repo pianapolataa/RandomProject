@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 # Load environment and model
-env = CarPathEnv()
+env = CarPathEnv(random_start=False)  # ← always starts at (0, 0)
 model = SAC.load("car_path_sac_model.zip")
 obs, _ = env.reset()
 
