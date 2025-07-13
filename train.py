@@ -6,6 +6,6 @@ env = CarPathEnv()
 check_env(env) 
 
 model = SAC("MlpPolicy", env, learning_rate=1e-3, verbose=1, tensorboard_log="./car_rl_logs/")
-model.learn(total_timesteps=100000)
+model.learn(total_timesteps=200000)
 
-model.save("car_path_sac_model_1")
+model.save("car_path_sac_model")

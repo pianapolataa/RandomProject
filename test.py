@@ -24,7 +24,7 @@ ax.set_title("Car Following Sine Path")
 ax.legend()
 
 # Simulation loop
-for _ in range(300):
+for _ in range(200):
     action, _ = model.predict(obs, deterministic=True)
     obs, reward, terminated, truncated, _ = env.step(action)
 

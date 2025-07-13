@@ -10,15 +10,18 @@ def generate_sine_path(x_range=(0, 50), step=0.5, amplitude=10, frequency=0.2):
     return path
 
 class CarPathEnv(gym.Env):
-    def __init__(self, path=None, friction=0.7, gas_sensitivity=0.9, brake_sensitivity=0.4, steer_sensitivity=0.1):
+    def __init__(self, path=None, friction=0.7, gas_sensitivity=0.9, brake_sensitivity=0.4, steer_sensitivity=0.1, random_start=True):
         super().__init__()
         self.friction = friction
         self.gas_sensitivity = gas_sensitivity
         self.brake_sensitivity = brake_sensitivity
         self.steer_sensitivity = steer_sensitivity
+        self.random_start = random_start
+
+        # ==== Path ====
+        self.path = path or generate_sine_path()
 
         # ==== Action Space ====
-        # gas [0, 1], brake [0, 1], steering [-1, 1]
         self.action_space = spaces.Box(
             low=np.array([0.0, 0.0, -1.0]),
             high=np.array([1.0, 1.0, 1.0]),
@@ -26,33 +29,37 @@ class CarPathEnv(gym.Env):
         )
 
         # ==== Observation Space ====
-        # x, y, heading, speed, dist_to_path, angle_to_path
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32
         )
 
-        # ==== Path: A list of waypoints ====
-        self.path = path or generate_sine_path()
         self.reset()
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
 
-        self.x = 0.0
-        self.y = 0.0
-        self.heading = 0.0
+        if self.random_start:
+            radius = 20
+            angle = np.random.uniform(0, 2 * np.pi)
+            self.x = radius * np.cos(angle)
+            self.y = radius * np.sin(angle)
+            self.heading = np.random.uniform(-np.pi, np.pi)
+        else:
+            self.x = 0.0
+            self.y = 0.0
+            self.heading = 0.0
+
         self.speed = 0.0
         self.step_count = 0
 
         self._update_dist_and_angle()
-        obs = self._get_obs()
-        return obs, {}
+        return self._get_obs(), {}
+
 
     def step(self, action):
         gas, brake, steer = action
         steer = np.clip(steer, -1.0, 1.0)
 
-        # Update heading, speed, position
         # Update heading, speed, position
         self.heading += steer * self.steer_sensitivity
         self.speed += gas * self.gas_sensitivity
@@ -70,14 +77,15 @@ class CarPathEnv(gym.Env):
         obs = self._get_obs()
         forward_velocity = self.speed * np.cos(self.angle_to_path)
         reward = (
-            100 * forward_velocity                          # reward moving faster (adjust weight)
-            - (self.dist_to_path ** 2)                # penalty for distance squared
-            - 0.1 * (self.angle_to_path ** 2)         # penalty for heading angle difference
-            - 0.01 * abs(steer)                       # penalty for steering effort (smoothness)
+            10 * forward_velocity                    # reward moving faster
+            - 0.1 * (self.dist_to_path ** 2)                # penalty for distance squared
+            - 0.01 * (self.angle_to_path ** 2)         # penalty for heading angle difference
+            - 0.001 * abs(steer)                       # penalty for steering effort (smoothness)
         )
+        reward += 0.1
 
         terminated = bool(self.dist_to_path > 20.0)  # e.g. crashed/far away
-        truncated = bool(self.step_count >= 200)      # episode length limit
+        truncated = bool(self.step_count >= 300)      # episode length limit
 
         info = {}
 

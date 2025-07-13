@@ -36,7 +36,8 @@ def simulate():
         friction=friction,
         gas_sensitivity=gas_sensitivity,
         brake_sensitivity=brake_sensitivity,
-        steer_sensitivity=steer_sensitivity
+        steer_sensitivity=steer_sensitivity,
+        random_start=False  # ← always starts at (0, 0)
     )
     obs, _ = env.reset()
 
