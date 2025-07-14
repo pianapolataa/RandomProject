@@ -42,7 +42,7 @@ def simulate():
     obs, _ = env.reset()
 
     car_positions = []
-    for _ in range(200):
+    for _ in range(300):
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, _ = env.step(action)
         car_positions.append([obs[0], obs[1]])

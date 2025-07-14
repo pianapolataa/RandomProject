@@ -39,7 +39,7 @@ class CarPathEnv(gym.Env):
         super().reset(seed=seed)
 
         if self.random_start:
-            radius = 20
+            radius = 7
             angle = np.random.uniform(0, 2 * np.pi)
             self.x = radius * np.cos(angle)
             self.y = radius * np.sin(angle)
@@ -51,10 +51,14 @@ class CarPathEnv(gym.Env):
 
         self.speed = 0.0
         self.step_count = 0
+        self.prev_pos = (self.x, self.y)
 
         self._update_dist_and_angle()
-        return self._get_obs(), {}
 
+        # Initialize prev_proj_x as current x on path direction (assuming path mainly along x axis)
+        self.prev_proj_x = self.x  
+
+        return self._get_obs(), {}
 
     def step(self, action):
         gas, brake, steer = action
@@ -66,8 +70,6 @@ class CarPathEnv(gym.Env):
         self.speed -= brake * self.brake_sensitivity
         self.speed *= (1 - self.friction)
         self.speed = max(self.speed, 0)
-        # print(self.speed)
-
         self.x += self.speed * np.cos(self.heading)
         self.y += self.speed * np.sin(self.heading)
 
@@ -75,17 +77,28 @@ class CarPathEnv(gym.Env):
         self._update_dist_and_angle()
 
         obs = self._get_obs()
-        forward_velocity = self.speed * np.cos(self.angle_to_path)
-        reward = (
-            10 * forward_velocity                    # reward moving faster
-            - 0.1 * (self.dist_to_path ** 2)                # penalty for distance squared
-            - 0.01 * (self.angle_to_path ** 2)         # penalty for heading angle difference
-            - 0.001 * abs(steer)                       # penalty for steering effort (smoothness)
-        )
-        reward += 0.1
 
-        terminated = bool(self.dist_to_path > 20.0)  # e.g. crashed/far away
-        truncated = bool(self.step_count >= 300)      # episode length limit
+        # Compute distance traveled this step
+        curr_pos = (self.x, self.y)
+        dx = curr_pos[0] - self.prev_pos[0]
+        dy = curr_pos[1] - self.prev_pos[1]
+        distance_traveled = np.sqrt(dx**2 + dy**2)
+        self.prev_pos = curr_pos
+        forward_velocity = self.speed * np.cos(self.angle_to_path)
+
+        reward = (
+            3.0 * distance_traveled                   # main progress reward
+            + 5.0 * forward_velocity                  # reward moving along path direction
+            - 0.1 * (self.dist_to_path ** 2)         # penalty for path deviation
+            - 0.05 * (self.angle_to_path ** 2)       # penalty for bad heading
+            - 0.005 * abs(steer)                      # smoothness penalty
+        )
+        # Bonus reward for good behavior
+        if self.dist_to_path < 1.0 and forward_velocity > 1.0:
+            reward += 10.0  # bonus for staying close and moving well
+
+        terminated = bool(self.dist_to_path > 20.0)
+        truncated = bool(self.step_count >= 300)
 
         info = {}
 
