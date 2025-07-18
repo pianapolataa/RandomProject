@@ -33,6 +33,14 @@ class CarPathEnv(gym.Env):
             low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32
         )
 
+        self.num_waypoints = 5  # or more, depending on path length
+        self.visited_waypoints = set()
+        self.prev_closest_wp = -1
+
+        # Precompute waypoints as evenly spaced indices along path
+        path_len = len(self.path)
+        self.waypoint_indices = np.linspace(0, path_len - 1, self.num_waypoints, dtype=int)
+
         self.reset()
 
     def reset(self, *, seed=None, options=None):
@@ -57,6 +65,9 @@ class CarPathEnv(gym.Env):
 
         # Initialize prev_proj_x as current x on path direction (assuming path mainly along x axis)
         self.prev_proj_x = self.x  
+
+        self.visited_waypoints = set()
+        self.prev_closest_wp = -1
 
         return self._get_obs(), {}
 
@@ -87,15 +98,21 @@ class CarPathEnv(gym.Env):
         forward_velocity = self.speed * np.cos(self.angle_to_path)
 
         reward = (
-            3.0 * distance_traveled                   # main progress reward
+            4.0 * distance_traveled                   # main progress reward
             + 5.0 * forward_velocity                  # reward moving along path direction
             - 0.1 * (self.dist_to_path ** 2)         # penalty for path deviation
             - 0.05 * (self.angle_to_path ** 2)       # penalty for bad heading
             - 0.005 * abs(steer)                      # smoothness penalty
         )
-        # Bonus reward for good behavior
-        if self.dist_to_path < 1.0 and forward_velocity > 1.0:
-            reward += 10.0  # bonus for staying close and moving well
+        # Check if a new waypoint is reached
+        closest_wp = self._get_closest_waypoint_index()
+        i = 1
+        if closest_wp is not None and closest_wp not in self.visited_waypoints:
+            self.visited_waypoints.add(closest_wp)
+            reward += 50.0 * i
+            i += 1
+
+        self.prev_closest_wp = closest_wp
 
         terminated = bool(self.dist_to_path > 20.0)
         truncated = bool(self.step_count >= 300)
@@ -103,6 +120,19 @@ class CarPathEnv(gym.Env):
         info = {}
 
         return obs, reward, terminated, truncated, info
+
+    def _get_closest_waypoint_index(self):
+        car_pos = np.array([self.x, self.y])
+        min_dist = float('3')
+        closest_wp = None
+
+        for i, idx in enumerate(self.waypoint_indices):
+            wp = np.array(self.path[idx])
+            dist = np.linalg.norm(car_pos - wp)
+            if dist < min_dist:
+                min_dist = dist
+                closest_wp = i
+        return closest_wp
 
 
     def _update_dist_and_angle(self):

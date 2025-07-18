@@ -27,6 +27,10 @@ def simulate():
     # === Generate path ===
     if path_type == "sine":
         path = generate_sine_path()
+        # Compute waypoints from path
+        num_waypoints = 5
+        indices = np.linspace(0, len(path) - 1, num_waypoints, dtype=int)
+        waypoints = [path[i] for i in indices]
     else:
         path = [(x, 0) for x in np.linspace(0, 50, 100)]
 
@@ -55,8 +59,10 @@ def simulate():
 
     return jsonify({
         "car": car_serializable,
-        "path": path_serializable
+        "path": path_serializable,
+        "waypoints": [[float(x), float(y)] for x, y in waypoints]
     })
+
 
 if __name__ == "__main__":
     app.run(debug=True)

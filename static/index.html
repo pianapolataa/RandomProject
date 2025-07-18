@@ -130,12 +130,32 @@
       const data = await res.json();
       const path = data.path;
       const car  = data.car;
+      const waypoints = data.waypoints || [];
 
       // Initialize traces
       const plotData = [
-        { x: [], y: [], mode: 'lines',          name: 'Path', line: { dash: 'dot', width: 2, color: 'gray' } },
-        { x: [], y: [], mode: 'lines+markers', name: 'Car',  line: { color: 'blue', width: 2 }, marker: { size: 6 } }
+        {
+          x: [], y: [],
+          mode: 'lines',
+          name: 'Path',
+          line: { dash: 'dot', width: 2, color: 'gray' }
+        },
+        {
+          x: [], y: [],
+          mode: 'lines+markers',
+          name: 'Car',
+          line: { color: 'blue', width: 2 },
+          marker: { size: 6 }
+        },
+        {
+          x: waypoints.map(p => p[0]),
+          y: waypoints.map(p => p[1]),
+          mode: 'markers',
+          name: 'Waypoints',
+          marker: { color: 'red', size: 10, symbol: 'cross' }
+        }
       ];
+
       Plotly.newPlot('plot', plotData, {
         margin: { t: 20, b: 40, l: 40, r: 20 },
         xaxis: { title: "X" },

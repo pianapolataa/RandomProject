@@ -6,7 +6,7 @@ import time
 
 # Load environment and model
 env = CarPathEnv(random_start=False)  # ← always starts at (0, 0)
-model = SAC.load("car_path_sac_model.zip")
+model = SAC.load("car_path_sac_model_BEST.zip")
 obs, _ = env.reset()
 
 # Extract the path to plot
