@@ -84,116 +84,181 @@
           <option value="straight">Straight</option>
         </select>
       </label>
+      <button id="showPathBtn">Show Path Only</button>
 
-      <button onclick="simulate()">Simulate</button>
+      <button id="modeToggle">🎮 Manual Mode</button>
+      <button onclick="simulate()" id="simulateBtn">Simulate</button>
       <button id="resetBtn">Reset to Defaults</button>
     </div>
 
     <div id="plot"></div>
   </div>
+  
 
-  <script>
-    // Theme toggle
-    const themeToggle = document.getElementById('themeToggle');
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      themeToggle.textContent = document.body.classList.contains('dark')
-        ? '☀️ Light Mode'
-        : '🌙 Dark Mode';
+<script>
+  // Theme toggle
+  const themeToggle = document.getElementById('themeToggle');
+  themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    themeToggle.textContent = document.body.classList.contains('dark')
+      ? '☀️ Light Mode'
+      : '🌙 Dark Mode';
+  });
+
+  let animationInterval = null;
+  let currentPath = [];
+  let currentWaypoints = [];
+
+  // Reusable function to show path and waypoints only
+  async function showPathOnly(path_type) {
+    // Stop ongoing animation
+    if (animationInterval) {
+      clearInterval(animationInterval);
+      animationInterval = null;
+      console.log('⏹ Simulation stopped by Show Path Only');
+    }
+
+    // Fetch path only from backend
+    const res = await fetch("/get_path", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path_type })
     });
+    const data = await res.json();
 
-    let animationInterval = null;
+    currentPath = data.path;
+    currentWaypoints = data.waypoints || [];
 
-    async function simulate() {
-      if (animationInterval) {
+    // Plot path and waypoints only
+const plotData = [
+  {
+    x: currentPath.map(p => p[0]),
+    y: currentPath.map(p => p[1]),
+    mode: 'lines',
+    name: 'Path',
+    line: { dash: 'dot', width: 2, color: 'gray' }
+  },
+  {
+    x: [],  // car trace empty here — will be added in simulate
+    y: [],
+    mode: 'lines+markers',
+    name: 'Car',
+    line: { color: 'blue', width: 2 },
+    marker: { size: 6 }
+  },
+  {
+    x: currentWaypoints.map(p => p[0]),
+    y: currentWaypoints.map(p => p[1]),
+    mode: 'markers',
+    name: 'Waypoints',
+    marker: { color: 'red', size: 10, symbol: 'cross' }
+  }
+];
+
+
+    Plotly.newPlot('plot', plotData, {
+      margin: { t: 20, b: 40, l: 40, r: 20 },
+      xaxis: { title: "X" },
+      yaxis: { title: "Y", scaleanchor: "x" }
+    });
+  }
+
+  // Show Path Only button
+  document.getElementById("showPathBtn").addEventListener("click", () => {
+    const path_type = document.getElementById("path_type").value;
+    showPathOnly(path_type);
+  });
+
+  // Manual mode toggle
+  let isManualMode = false;
+
+  const modeToggle = document.getElementById('modeToggle');
+  const simulateBtn = document.getElementById('simulateBtn');
+
+modeToggle.addEventListener('click', () => {
+  // Stop ongoing simulation
+  if (animationInterval) {
+    clearInterval(animationInterval);
+    animationInterval = null;
+    console.log('⏹ Simulation stopped');
+  }
+
+  // Call Show Path Only to clear and redraw path/waypoints
+  showPathOnly();
+
+  isManualMode = !isManualMode;
+
+  if (isManualMode) {
+    modeToggle.textContent = '🤖 Auto Mode';
+    simulateBtn.disabled = true;
+    console.log('✅ Manual Mode Activated');
+    // TODO: Start manual control logic here
+  } else {
+    modeToggle.textContent = '🎮 Manual Mode';
+    simulateBtn.disabled = false;
+    console.log('✅ Auto Mode Activated');
+    // TODO: Cleanup manual control here
+  }
+});
+
+  // Main simulation function
+  async function simulate() {
+    if (animationInterval) {
+      clearInterval(animationInterval);
+      animationInterval = null;
+    }
+
+    const friction        = parseFloat(document.getElementById("friction").value);
+    const gas_sensitivity = parseFloat(document.getElementById("gas_sensitivity").value);
+    const brake_sensitivity = parseFloat(document.getElementById("brake_sensitivity").value);
+    const steer_sensitivity = parseFloat(document.getElementById("steer_sensitivity").value);
+    const path_type       = document.getElementById("path_type").value;
+
+    // Show path and waypoints first
+    await showPathOnly(path_type);
+
+    // Now fetch full simulation (including car positions)
+    const res = await fetch("/simulate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        friction,
+        gas_sensitivity,
+        brake_sensitivity,
+        steer_sensitivity,
+        path_type
+      })
+    });
+    const data = await res.json();
+    const car  = data.car;
+
+    let idx = 0;
+    const maxIdx = car.length;
+
+    animationInterval = setInterval(() => {
+      if (idx >= maxIdx) {
         clearInterval(animationInterval);
         animationInterval = null;
+        return;
       }
+      // Extend car trace only, since path & waypoints already plotted
+      Plotly.extendTraces('plot', {
+        x: [[car[idx][0]]],
+        y: [[car[idx][1]]]
+      }, [1]); // second trace is car
 
-      const friction        = parseFloat(document.getElementById("friction").value);
-      const gas_sensitivity = parseFloat(document.getElementById("gas_sensitivity").value);
-      const brake_sensitivity = parseFloat(document.getElementById("brake_sensitivity").value);
-      const steer_sensitivity = parseFloat(document.getElementById("steer_sensitivity").value);
-      const path_type       = document.getElementById("path_type").value;
+      idx++;
+    }, 50);
 
-      const res = await fetch("/simulate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          friction,
-          gas_sensitivity,
-          brake_sensitivity,
-          steer_sensitivity,
-          path_type
-        })
-      });
-      const data = await res.json();
-      const path = data.path;
-      const car  = data.car;
-      const waypoints = data.waypoints || [];
-
-      // Initialize traces
-      const plotData = [
-        {
-          x: [], y: [],
-          mode: 'lines',
-          name: 'Path',
-          line: { dash: 'dot', width: 2, color: 'gray' }
-        },
-        {
-          x: [], y: [],
-          mode: 'lines+markers',
-          name: 'Car',
-          line: { color: 'blue', width: 2 },
-          marker: { size: 6 }
-        },
-        {
-          x: waypoints.map(p => p[0]),
-          y: waypoints.map(p => p[1]),
-          mode: 'markers',
-          name: 'Waypoints',
-          marker: { color: 'red', size: 10, symbol: 'cross' }
-        }
-      ];
-
-      Plotly.newPlot('plot', plotData, {
-        margin: { t: 20, b: 40, l: 40, r: 20 },
-        xaxis: { title: "X" },
-        yaxis: { title: "Y", scaleanchor: "x" }
-      });
-
-      let idx    = 0;
-      const maxIdx = Math.max(path.length, car.length);
-      animationInterval = setInterval(() => {
-        if (idx >= maxIdx) {
-          clearInterval(animationInterval);
-          animationInterval = null;
-          return;
-        }
-        if (idx < path.length) {
-          Plotly.extendTraces('plot', {
-            x: [[path[idx][0]]],
-            y: [[path[idx][1]]]
-          }, [0]);
-        }
-        if (idx < car.length) {
-          Plotly.extendTraces('plot', {
-            x: [[car[idx][0]]],
-            y: [[car[idx][1]]]
-          }, [1]);
-        }
-        idx++;
-      }, 50);
-
-      // Reset handler
-      document.getElementById("resetBtn").onclick = () => {
-        document.getElementById("friction").value = 0.7;        fDisplay.value = 0.7;
-        document.getElementById("gas_sensitivity").value = 0.9; gDisplay.value = 0.9;
-        document.getElementById("brake_sensitivity").value = 0.4; bDisplay.value = 0.4;
-        document.getElementById("steer_sensitivity").value = 0.1; sDisplay.value = 0.1;
-        document.getElementById("path_type").value = "sine";
-      };
-    }
-  </script>
+    // Reset handler
+    document.getElementById("resetBtn").onclick = () => {
+      document.getElementById("friction").value = 0.7;        fDisplay.value = 0.7;
+      document.getElementById("gas_sensitivity").value = 0.9; gDisplay.value = 0.9;
+      document.getElementById("brake_sensitivity").value = 0.4; bDisplay.value = 0.4;
+      document.getElementById("steer_sensitivity").value = 0.1; sDisplay.value = 0.1;
+      document.getElementById("path_type").value = "sine";
+    };
+  }
+</script>
 </body>
 </html>

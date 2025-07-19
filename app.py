@@ -8,6 +8,28 @@ app = Flask(__name__, static_folder="static")
 
 # Preload the model
 model = SAC.load("car_path_sac_model.zip")
+@app.route("/get_path", methods=["POST"])
+def get_path():
+    data = request.json
+
+    path_type = data.get("path_type", "sine")
+
+    if path_type == "sine":
+        path = generate_sine_path()
+    else:
+        path = [(x, 0) for x in np.linspace(0, 50, 100)]
+
+    num_waypoints = 5
+    indices = np.linspace(0, len(path) - 1, num_waypoints, dtype=int)
+    waypoints = [path[i] for i in indices]
+
+    path_serializable = [[float(x), float(y)] for x, y in path]
+    waypoints_serializable = [[float(x), float(y)] for x, y in waypoints]
+
+    return jsonify({
+        "path": path_serializable,
+        "waypoints": waypoints_serializable
+    })
 
 @app.route("/")
 def serve_index():
