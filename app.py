@@ -27,12 +27,12 @@ def simulate():
     # === Generate path ===
     if path_type == "sine":
         path = generate_sine_path()
-        # Compute waypoints from path
-        num_waypoints = 5
-        indices = np.linspace(0, len(path) - 1, num_waypoints, dtype=int)
-        waypoints = [path[i] for i in indices]
     else:
         path = [(x, 0) for x in np.linspace(0, 50, 100)]
+    # Compute waypoints from path
+    num_waypoints = 5
+    indices = np.linspace(0, len(path) - 1, num_waypoints, dtype=int)
+    waypoints = [path[i] for i in indices]
 
     # === Create environment with all parameters ===
     env = CarPathEnv(
