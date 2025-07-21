@@ -82,13 +82,19 @@
         <select id="path_type">
           <option value="sine">Sine</option>
           <option value="straight">Straight</option>
+          <option value="alternating">Alternating</option>
         </select>
-      </label>
+      </label>      
       <button id="showPathBtn">Show Path Only</button>
 
       <button id="modeToggle">🎮 Manual Mode</button>
-      <button onclick="simulate()" id="simulateBtn">Simulate</button>
-      <button id="resetBtn">Reset to Defaults</button>
+      <!-- <button onclick="simulate()" id="simulateBtn">Simulate</button>
+      <span id="loadingSpinner" style="display:none; margin-left:10px;">⏳ Simulating...</span> -->
+      <div id="simulateContainer">
+        <button onclick="simulate()" id="simulateBtn">Simulate</button>
+        <button id="resetBtn">Reset to Defaults</button>
+        <div id="spinner" style="display:none; margin-top: 10px;">⏳ Simulating...</div>
+      </div>      
     </div>
 
     <div id="plot"></div>
@@ -208,16 +214,16 @@ modeToggle.addEventListener('click', () => {
       animationInterval = null;
     }
 
+    document.getElementById("spinner").style.display = "block"; // 👈 show
+
     const friction        = parseFloat(document.getElementById("friction").value);
     const gas_sensitivity = parseFloat(document.getElementById("gas_sensitivity").value);
     const brake_sensitivity = parseFloat(document.getElementById("brake_sensitivity").value);
     const steer_sensitivity = parseFloat(document.getElementById("steer_sensitivity").value);
     const path_type       = document.getElementById("path_type").value;
 
-    // Show path and waypoints first
     await showPathOnly(path_type);
 
-    // Now fetch full simulation (including car positions)
     const res = await fetch("/simulate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -229,6 +235,7 @@ modeToggle.addEventListener('click', () => {
         path_type
       })
     });
+
     const data = await res.json();
     const car  = data.car;
 
@@ -239,26 +246,24 @@ modeToggle.addEventListener('click', () => {
       if (idx >= maxIdx) {
         clearInterval(animationInterval);
         animationInterval = null;
+        document.getElementById("spinner").style.display = "none"; // 👈 hide
         return;
       }
-      // Extend car trace only, since path & waypoints already plotted
       Plotly.extendTraces('plot', {
         x: [[car[idx][0]]],
         y: [[car[idx][1]]]
-      }, [1]); // second trace is car
-
+      }, [1]);
       idx++;
     }, 50);
 
-    // Reset handler
-    document.getElementById("resetBtn").onclick = () => {
-      document.getElementById("friction").value = 0.7;        fDisplay.value = 0.7;
-      document.getElementById("gas_sensitivity").value = 0.9; gDisplay.value = 0.9;
-      document.getElementById("brake_sensitivity").value = 0.4; bDisplay.value = 0.4;
-      document.getElementById("steer_sensitivity").value = 0.1; sDisplay.value = 0.1;
-      document.getElementById("path_type").value = "sine";
-    };
+    // Also hide spinner after fetch in case of errors or instant end
+    setTimeout(() => {
+      if (animationInterval === null) {
+        document.getElementById("spinner").style.display = "none";
+      }
+    }, 100);
   }
+
 </script>
 </body>
 </html>

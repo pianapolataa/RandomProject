@@ -1,25 +1,28 @@
 from flask import Flask, request, jsonify, send_from_directory
 from stable_baselines3 import SAC
-from path_env import CarPathEnv, generate_sine_path
+from path_env import CarPathEnv, generate_sine_path, generate_straight_path, generate_alternating_path
 import numpy as np
 import os
 
 app = Flask(__name__, static_folder="static")
 
 # Preload the model
-model = SAC.load("car_path_sac_model.zip")
+model = SAC.load("car_path_sac_model_BEST.zip")
 @app.route("/get_path", methods=["POST"])
 def get_path():
     data = request.json
-
     path_type = data.get("path_type", "sine")
 
     if path_type == "sine":
         path = generate_sine_path()
+        num_waypoints = 5
+    elif path_type == "alternating":
+        path = generate_alternating_path()
+        num_waypoints = 10
     else:
         path = [(x, 0) for x in np.linspace(0, 50, 100)]
+        num_waypoints = 5
 
-    num_waypoints = 5
     indices = np.linspace(0, len(path) - 1, num_waypoints, dtype=int)
     waypoints = [path[i] for i in indices]
 
@@ -39,49 +42,52 @@ def serve_index():
 def simulate():
     data = request.json
 
-    # === Extract parameters from request ===
     friction = data.get("friction", 0.7)
     path_type = data.get("path_type", "sine")
     gas_sensitivity = data.get("gas_sensitivity", 0.9)
     brake_sensitivity = data.get("brake_sensitivity", 0.4)
     steer_sensitivity = data.get("steer_sensitivity", 0.1)
 
-    # === Generate path ===
     if path_type == "sine":
         path = generate_sine_path()
+        num_waypoints = 5
+    elif path_type == "alternating":
+        path = generate_alternating_path()
+        num_waypoints = 10
     else:
         path = [(x, 0) for x in np.linspace(0, 50, 100)]
-    # Compute waypoints from path
-    num_waypoints = 5
+        num_waypoints = 5
+
     indices = np.linspace(0, len(path) - 1, num_waypoints, dtype=int)
     waypoints = [path[i] for i in indices]
 
-    # === Create environment with all parameters ===
     env = CarPathEnv(
         path=path,
         friction=friction,
         gas_sensitivity=gas_sensitivity,
         brake_sensitivity=brake_sensitivity,
         steer_sensitivity=steer_sensitivity,
-        random_start=False  # ← always starts at (0, 0)
+        random_start=False
     )
     obs, _ = env.reset()
 
+    steps = 220
+    if path_type == "alternating":
+        steps = 1000
+    elif path_type == "straight":
+        steps = 150
+
     car_positions = []
-    for _ in range(300):
+    for _ in range(steps):
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, _ = env.step(action)
         car_positions.append([obs[0], obs[1]])
         if terminated or truncated:
             break
 
-    # === Convert to JSON-safe types ===
-    car_serializable = [[float(x), float(y)] for x, y in car_positions]
-    path_serializable = [[float(x), float(y)] for x, y in path]
-
     return jsonify({
-        "car": car_serializable,
-        "path": path_serializable,
+        "car": [[float(x), float(y)] for x, y in car_positions],
+        "path": [[float(x), float(y)] for x, y in path],
         "waypoints": [[float(x), float(y)] for x, y in waypoints]
     })
 

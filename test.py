@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 # Load environment and model
-env = CarPathEnv(random_start=False)  # ← always starts at (0, 0)
+env = CarPathEnv(path="alternating", random_start=False)  # ← always starts at (0, 0)
 model = SAC.load("car_path_sac_model_BEST.zip")
 obs, _ = env.reset()
 
@@ -20,11 +20,11 @@ ax.plot(path_x, path_y, 'k--', label='Target Path')
 car_point, = ax.plot([], [], 'ro', label='Car')
 ax.set_xlim(min(path_x) - 5, max(path_x) + 5)
 ax.set_ylim(min(path_y) - 10, max(path_y) + 10)
-ax.set_title("Car Following Sine Path")
+ax.set_title("Car Following Alternating Path")
 ax.legend()
 
 # Simulation loop
-for _ in range(300):
+for _ in range(1000):
     action, _ = model.predict(obs, deterministic=True)
     obs, reward, terminated, truncated, _ = env.step(action)
 

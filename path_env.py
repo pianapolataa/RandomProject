@@ -9,6 +9,26 @@ def generate_sine_path(x_range=(0, 50), step=0.5, amplitude=10, frequency=0.2):
     path = [(x, amplitude * np.sin(frequency * x)) for x in x_vals]
     return path
 
+def generate_straight_path(x_range=(0, 50), step=0.5, y_value=0.0):
+    x_vals = np.arange(x_range[0], x_range[1], step)
+    path = [(x, y_value) for x in x_vals]
+    return path
+
+def generate_alternating_path():
+    full_path = []
+
+    sine1 = generate_sine_path(x_range=(0, 50), amplitude=10, frequency=0.2)
+    straight1 = generate_straight_path(x_range=(50, 100), y_value=0.0)
+    sine2 = generate_sine_path(x_range=(100, 150), amplitude=7, frequency=0.3)
+    straight2 = generate_straight_path(x_range=(150, 200), y_value=5.0)
+
+    full_path.extend(sine1)
+    full_path.extend(straight1)
+    full_path.extend(sine2)
+    full_path.extend(straight2)
+
+    return full_path
+
 class CarPathEnv(gym.Env):
     def __init__(self, path=None, friction=0.7, gas_sensitivity=0.9, brake_sensitivity=0.4, steer_sensitivity=0.1, random_start=True):
         super().__init__()
@@ -19,7 +39,15 @@ class CarPathEnv(gym.Env):
         self.random_start = random_start
 
         # ==== Path ====
-        self.path = path or generate_sine_path()
+        if path == 'alternating':
+            self.path = generate_alternating_path()
+            self.num_waypoints = 10 
+        elif path is None:
+            self.path = generate_sine_path()
+            self.num_waypoints = 5 
+        else:
+            self.path = path  # Assume it's a custom list of waypoints
+            self.num_waypoints = 5
 
         # ==== Action Space ====
         self.action_space = spaces.Box(
@@ -33,7 +61,6 @@ class CarPathEnv(gym.Env):
             low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32
         )
 
-        self.num_waypoints = 5  # or more, depending on path length
         self.visited_waypoints = set()
         self.prev_closest_wp = -1
 
@@ -109,13 +136,13 @@ class CarPathEnv(gym.Env):
         i = 1
         if closest_wp is not None and closest_wp not in self.visited_waypoints:
             self.visited_waypoints.add(closest_wp)
-            reward += 50.0 * i
+            reward += 30.0 * i
             i += 1
 
         self.prev_closest_wp = closest_wp
 
         terminated = bool(self.dist_to_path > 20.0)
-        truncated = bool(self.step_count >= 300)
+        truncated = bool(self.step_count >= 1000)
 
         info = {}
 
