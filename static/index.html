@@ -4,7 +4,6 @@
   <title>RL Car Simulation</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    /* Dark‑mode styles */
     body.dark {
       background: #1e1e1e;
       color: #f5f5f5;
@@ -17,26 +16,21 @@
       background: #333333;
     }
 
-    /* Layout */
     #app {
       display: flex;
       align-items: flex-start;
       padding: 20px;
-      box-sizing: border-box;
     }
     #controls {
       width: 300px;
       padding: 1rem;
-      box-sizing: border-box;
     }
     #plot {
       width: 700px;
       height: 450px;
       margin-left: 20px;
-      background: transparent;
     }
 
-    /* Original styles */
     label { display: block; margin-top: 10px; }
     output { margin-left: 10px; font-weight: bold; }
     #themeToggle {
@@ -85,11 +79,10 @@
           <option value="alternating">Alternating</option>
         </select>
       </label>
-      <button id="showPathBtn">Reset</button>
 
+      <button id="showPathBtn">Reset</button>
       <button id="modeToggle">🎮 Manual Mode</button>
-      <!-- <button onclick="simulate()" id="simulateBtn">Simulate</button>
-      <span id="loadingSpinner" style="display:none; margin-left:10px;">⏳ Simulating...</span> -->
+
       <div id="simulateContainer">
         <button onclick="simulate()" id="simulateBtn">Simulate</button>
         <button id="resetBtn">Reset to Defaults</button>
@@ -99,32 +92,19 @@
 
     <div id="plot"></div>
   </div>
-  
 
 <script>
-  // Theme toggle
   const themeToggle = document.getElementById('themeToggle');
   themeToggle.addEventListener('click', () => {
     document.body.classList.toggle('dark');
-    themeToggle.textContent = document.body.classList.contains('dark')
-      ? '☀️ Light Mode'
-      : '🌙 Dark Mode';
+    themeToggle.textContent = document.body.classList.contains('dark') ? '☀️ Light Mode' : '🌙 Dark Mode';
   });
 
   let animationInterval = null;
   let currentPath = [];
   let currentWaypoints = [];
 
-  // Reusable function to show path and waypoints only
   async function showPathOnly(path_type) {
-    // Stop ongoing animation
-    if (animationInterval) {
-      clearInterval(animationInterval);
-      animationInterval = null;
-      console.log('⏹ Simulation stopped by Show Path Only');
-    }
-
-    // Fetch path only from backend
     const res = await fetch("/get_path", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -135,32 +115,30 @@
     currentPath = data.path;
     currentWaypoints = data.waypoints || [];
 
-    // Plot path and waypoints only
-const plotData = [
-  {
-    x: currentPath.map(p => p[0]),
-    y: currentPath.map(p => p[1]),
-    mode: 'lines',
-    name: 'Path',
-    line: { dash: 'dot', width: 2, color: 'gray' }
-  },
-  {
-    x: [],  // car trace empty here — will be added in simulate
-    y: [],
-    mode: 'lines+markers',
-    name: 'Car',
-    line: { color: 'blue', width: 2 },
-    marker: { size: 6 }
-  },
-  {
-    x: currentWaypoints.map(p => p[0]),
-    y: currentWaypoints.map(p => p[1]),
-    mode: 'markers',
-    name: 'Waypoints',
-    marker: { color: 'red', size: 10, symbol: 'cross' }
-  }
-];
-
+    const plotData = [
+      {
+        x: currentPath.map(p => p[0]),
+        y: currentPath.map(p => p[1]),
+        mode: 'lines',
+        name: 'Path',
+        line: { dash: 'dot', width: 2, color: 'gray' }
+      },
+      {
+        x: [],
+        y: [],
+        mode: 'lines+markers',
+        name: 'Car',
+        line: { color: 'blue', width: 2 },
+        marker: { size: 6 }
+      },
+      {
+        x: currentWaypoints.map(p => p[0]),
+        y: currentWaypoints.map(p => p[1]),
+        mode: 'markers',
+        name: 'Waypoints',
+        marker: { color: 'red', size: 10, symbol: 'cross' }
+      }
+    ];
 
     Plotly.newPlot('plot', plotData, {
       margin: { t: 20, b: 40, l: 40, r: 20 },
@@ -169,58 +147,98 @@ const plotData = [
     });
   }
 
-  // Show Path Only button
-  document.getElementById("showPathBtn").addEventListener("click", () => {
-    const path_type = document.getElementById("path_type").value;
-    showPathOnly(path_type);
-  });
-
-  // Manual mode toggle
-  let isManualMode = false;
-
-  const modeToggle = document.getElementById('modeToggle');
-  const simulateBtn = document.getElementById('simulateBtn');
-
-modeToggle.addEventListener('click', () => {
-  // Stop ongoing simulation
+  // Show Path Only (Reset) Button
+document.getElementById("showPathBtn").addEventListener("click", () => {
   if (animationInterval) {
     clearInterval(animationInterval);
     animationInterval = null;
-    console.log('⏹ Simulation stopped');
   }
+  document.getElementById("spinner").style.display = "none";
+  const path_type = document.getElementById("path_type").value;
+  showPathOnly(path_type);
 
-  // Call Show Path Only to clear and redraw path/waypoints
-  showPathOnly();
-
-  isManualMode = !isManualMode;
-
-  if (isManualMode) {
-    modeToggle.textContent = '🤖 Auto Mode';
-    simulateBtn.disabled = true;
-    console.log('✅ Manual Mode Activated');
-    // TODO: Start manual control logic here
-  } else {
-    modeToggle.textContent = '🎮 Manual Mode';
-    simulateBtn.disabled = false;
-    console.log('✅ Auto Mode Activated');
-    // TODO: Cleanup manual control here
-  }
+  simulateBtn.disabled = false; // <-- Added this line to re-enable simulate button
 });
 
-  // Main simulation function
+
+  // Reset to Defaults
+document.getElementById("resetBtn").addEventListener("click", () => {
+  document.getElementById("friction").value = 0.7;
+  document.getElementById("gas_sensitivity").value = 0.9;
+  document.getElementById("brake_sensitivity").value = 0.4;
+  document.getElementById("steer_sensitivity").value = 0.1;
+  fDisplay.value = 0.7;
+  gDisplay.value = 0.9;
+  bDisplay.value = 0.4;
+  sDisplay.value = 0.1;
+
+  // Do NOT clear animationInterval, reset spinner, reload plot, or change simulateBtn.disabled
+});
+
+
+
+  // Manual Mode Toggle
+  let isManualMode = false;
+  const modeToggle = document.getElementById('modeToggle');
+  const simulateBtn = document.getElementById('simulateBtn');
+
+  modeToggle.addEventListener('click', () => {
+    if (animationInterval) {
+      clearInterval(animationInterval);
+      animationInterval = null;
+    }
+    document.getElementById("spinner").style.display = "none";
+
+    const path_type = document.getElementById("path_type").value;
+    showPathOnly(path_type);
+
+    isManualMode = !isManualMode;
+
+    if (isManualMode) {
+      modeToggle.textContent = '🤖 Auto Mode';
+      simulateBtn.disabled = true;
+      console.log('✅ Manual Mode Activated');
+    } else {
+      modeToggle.textContent = '🎮 Manual Mode';
+      simulateBtn.disabled = false;
+      console.log('✅ Auto Mode Activated');
+    }
+  });
+
+  // Controls to disable during 1-second cooldown
+  const buttonsToDisable = [
+    document.getElementById('showPathBtn'),
+    document.getElementById('modeToggle'),
+    document.getElementById('resetBtn'),
+    document.getElementById('path_type'),
+    document.getElementById('friction'),
+    document.getElementById('gas_sensitivity'),
+    document.getElementById('brake_sensitivity'),
+    document.getElementById('steer_sensitivity'),
+  ];
+
+  function setControlsDisabled(state) {
+    buttonsToDisable.forEach(el => el.disabled = state);
+  }
+
+  // Simulate
   async function simulate() {
     if (animationInterval) {
       clearInterval(animationInterval);
       animationInterval = null;
     }
 
-    document.getElementById("spinner").style.display = "block"; // 👈 show
+    // Disable other controls immediately
+    setControlsDisabled(true);
+    simulateBtn.disabled = true;
 
-    const friction        = parseFloat(document.getElementById("friction").value);
+    document.getElementById("spinner").style.display = "block";
+
+    const friction = parseFloat(document.getElementById("friction").value);
     const gas_sensitivity = parseFloat(document.getElementById("gas_sensitivity").value);
     const brake_sensitivity = parseFloat(document.getElementById("brake_sensitivity").value);
     const steer_sensitivity = parseFloat(document.getElementById("steer_sensitivity").value);
-    const path_type       = document.getElementById("path_type").value;
+    const path_type = document.getElementById("path_type").value;
 
     await showPathOnly(path_type);
 
@@ -237,7 +255,10 @@ modeToggle.addEventListener('click', () => {
     });
 
     const data = await res.json();
-    const car  = data.car;
+    const car = data.car;
+
+    // Re-enable controls after 1 second
+    setTimeout(() => setControlsDisabled(false), 1000);
 
     let idx = 0;
     const maxIdx = car.length;
@@ -246,7 +267,8 @@ modeToggle.addEventListener('click', () => {
       if (idx >= maxIdx) {
         clearInterval(animationInterval);
         animationInterval = null;
-        document.getElementById("spinner").style.display = "none"; // 👈 hide
+        document.getElementById("spinner").style.display = "none";
+        simulateBtn.disabled = false;
         return;
       }
       Plotly.extendTraces('plot', {
@@ -255,15 +277,7 @@ modeToggle.addEventListener('click', () => {
       }, [1]);
       idx++;
     }, 50);
-
-    // Also hide spinner after fetch in case of errors or instant end
-    setTimeout(() => {
-      if (animationInterval === null) {
-        document.getElementById("spinner").style.display = "none";
-      }
-    }, 100);
   }
-
 </script>
 </body>
 </html>
