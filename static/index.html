@@ -148,17 +148,27 @@
   }
 
   // Show Path Only (Reset) Button
-  document.getElementById("showPathBtn").addEventListener("click", () => {
+  document.getElementById("showPathBtn").addEventListener("click", async () => {
     if (animationInterval) {
       clearInterval(animationInterval);
       animationInterval = null;
     }
+    if (manualAnimationInterval) {
+      clearInterval(manualAnimationInterval);
+      manualAnimationInterval = null;
+    }
+
     document.getElementById("spinner").style.display = "none";
     const path_type = document.getElementById("path_type").value;
-    showPathOnly(path_type);
+    await showPathOnly(path_type);
 
-    simulateBtn.disabled = false; // re-enable simulate button
+    if (isManualMode) {
+      startManualSimulation(); // restart manual simulation after reset
+    }
+
+    simulateBtn.disabled = false;
   });
+
 
 
   // Reset to Defaults
@@ -272,7 +282,7 @@
       }
     }
 
-      console.log("Gas:", gas, "Brake:", brake, "Steer:", steer); // 👈 You add this line
+      console.log("Gas:", gas, "Brake:", brake, "Steer:", steer, "carx:", carState.x); // 👈 You add this line
 
   }
 
@@ -352,7 +362,13 @@ const path_type        = pathTypeSelect.value;
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ gas, brake, steer })
     });
-    const data = await stepRes.json();
+const data = await stepRes.json();
+carState = {
+  x: data.observation[0],
+  y: data.observation[1],
+  theta: data.observation[2],
+  v: data.observation[3],
+};
     if (data.error) {
       console.error(data.error);
       clearInterval(manualAnimationInterval);
@@ -364,10 +380,11 @@ const path_type        = pathTypeSelect.value;
       y: [[data.observation[1]]]
     }, [1]);
 
-    if (data.terminated || data.truncated) {
+    if (data.terminated || data.truncated || carState.x > 50) {
       clearInterval(manualAnimationInterval);
-      console.log("Manual episode ended");
+      console.log("✅ Manual episode ended (auto-stop)");
     }
+
   }, 50);
 }
 
