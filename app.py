@@ -3,6 +3,7 @@ from stable_baselines3 import SAC
 from path_env import CarPathEnv, generate_sine_path, generate_straight_path, generate_alternating_path
 import numpy as np
 import os
+manual_env = None  # Global environment instance for manual control
 
 app = Flask(__name__, static_folder="static")
 
@@ -91,6 +92,61 @@ def simulate():
         "waypoints": [[float(x), float(y)] for x, y in waypoints]
     })
 
+@app.route("/manual_start", methods=["POST"])
+def manual_start():
+    global manual_env
+    data = request.json
+    friction = data.get("friction", 0.7)
+    path_type = data.get("path_type", "sine")
+    gas_sensitivity = data.get("gas_sensitivity", 0.9)
+    brake_sensitivity = data.get("brake_sensitivity", 0.4)
+    steer_sensitivity = data.get("steer_sensitivity", 0.1)
+
+    if path_type == "sine":
+        path = generate_sine_path()
+    elif path_type == "alternating":
+        path = generate_alternating_path()
+    else:
+        path = [(x, 0) for x in np.linspace(0, 50, 100)]
+
+    manual_env = CarPathEnv(
+        path=path,
+        friction=friction,
+        gas_sensitivity=gas_sensitivity,
+        brake_sensitivity=brake_sensitivity,
+        steer_sensitivity=steer_sensitivity,
+        random_start=False
+    )
+    obs, _ = manual_env.reset()
+
+    return jsonify({
+        "observation": obs.tolist(),
+        "path": [[float(x), float(y)] for x, y in path]
+    })
+
+@app.route("/manual_step", methods=["POST"])
+def manual_step():
+    global manual_env
+    if manual_env is None:
+        return jsonify({"error": "Manual environment not initialized. Call /manual_start first."}), 400
+
+    data = request.json
+    gas = float(data.get("gas", 0.0))
+    brake = float(data.get("brake", 0.0))
+    steer = float(data.get("steer", 0.0))
+
+    gas = np.clip(gas, 0.0, 1.0)
+    brake = np.clip(brake, 0.0, 1.0)
+    steer = np.clip(steer, -1.0, 1.0)
+
+    obs, reward, terminated, truncated, info = manual_env.step([gas, brake, steer])
+
+    return jsonify({
+        "observation": obs.tolist(),
+        "reward": reward,
+        "terminated": terminated,
+        "truncated": truncated
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)

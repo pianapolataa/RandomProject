@@ -148,60 +148,63 @@
   }
 
   // Show Path Only (Reset) Button
-document.getElementById("showPathBtn").addEventListener("click", () => {
-  if (animationInterval) {
-    clearInterval(animationInterval);
-    animationInterval = null;
-  }
-  document.getElementById("spinner").style.display = "none";
-  const path_type = document.getElementById("path_type").value;
-  showPathOnly(path_type);
+  document.getElementById("showPathBtn").addEventListener("click", () => {
+    if (animationInterval) {
+      clearInterval(animationInterval);
+      animationInterval = null;
+    }
+    document.getElementById("spinner").style.display = "none";
+    const path_type = document.getElementById("path_type").value;
+    showPathOnly(path_type);
 
-  simulateBtn.disabled = false; // <-- Added this line to re-enable simulate button
-});
+    simulateBtn.disabled = false; // re-enable simulate button
+  });
 
 
   // Reset to Defaults
-document.getElementById("resetBtn").addEventListener("click", () => {
-  document.getElementById("friction").value = 0.7;
-  document.getElementById("gas_sensitivity").value = 0.9;
-  document.getElementById("brake_sensitivity").value = 0.4;
-  document.getElementById("steer_sensitivity").value = 0.1;
-  fDisplay.value = 0.7;
-  gDisplay.value = 0.9;
-  bDisplay.value = 0.4;
-  sDisplay.value = 0.1;
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    document.getElementById("friction").value = 0.7;
+    document.getElementById("gas_sensitivity").value = 0.9;
+    document.getElementById("brake_sensitivity").value = 0.4;
+    document.getElementById("steer_sensitivity").value = 0.1;
+    fDisplay.value = 0.7;
+    gDisplay.value = 0.9;
+    bDisplay.value = 0.4;
+    sDisplay.value = 0.1;
 
-  // Do NOT clear animationInterval, reset spinner, reload plot, or change simulateBtn.disabled
-});
-
-
+    // No animation reset here
+  });
 
   // Manual Mode Toggle
   let isManualMode = false;
   const modeToggle = document.getElementById('modeToggle');
   const simulateBtn = document.getElementById('simulateBtn');
 
-  modeToggle.addEventListener('click', () => {
-    if (animationInterval) {
-      clearInterval(animationInterval);
-      animationInterval = null;
+  // Key state tracking for WASD
+  const keysPressed = {
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+  };
+
+  window.addEventListener('keydown', (e) => {
+    if (!isManualMode) return; // Only track keys in manual mode
+    switch(e.key.toLowerCase()) {
+      case 'w': keysPressed.w = true; e.preventDefault(); break;
+      case 'a': keysPressed.a = true; e.preventDefault(); break;
+      case 's': keysPressed.s = true; e.preventDefault(); break;
+      case 'd': keysPressed.d = true; e.preventDefault(); break;
     }
-    document.getElementById("spinner").style.display = "none";
+  });
 
-    const path_type = document.getElementById("path_type").value;
-    showPathOnly(path_type);
-
-    isManualMode = !isManualMode;
-
-    if (isManualMode) {
-      modeToggle.textContent = '🤖 Auto Mode';
-      simulateBtn.disabled = true;
-      console.log('✅ Manual Mode Activated');
-    } else {
-      modeToggle.textContent = '🎮 Manual Mode';
-      simulateBtn.disabled = false;
-      console.log('✅ Auto Mode Activated');
+  window.addEventListener('keyup', (e) => {
+    if (!isManualMode) return;
+    switch(e.key.toLowerCase()) {
+      case 'w': keysPressed.w = false; e.preventDefault(); break;
+      case 'a': keysPressed.a = false; e.preventDefault(); break;
+      case 's': keysPressed.s = false; e.preventDefault(); break;
+      case 'd': keysPressed.d = false; e.preventDefault(); break;
     }
   });
 
@@ -221,11 +224,193 @@ document.getElementById("resetBtn").addEventListener("click", () => {
     buttonsToDisable.forEach(el => el.disabled = state);
   }
 
-  // Simulate
+  // Manual mode car state and controls
+  let carState = {
+    x: 0,
+    y: 0,
+    heading: 0, // angle in radians, 0 = right
+    velocity: 0,
+    steerAngle: 0,
+  };
+
+  let gas = 0;
+  let brake = 0;
+  let steer = 0;
+
+  // Constants for control update speed and limits
+  const GAS_STEP = 0.05;
+  const BRAKE_STEP = 0.05;
+  const STEER_STEP = 0.03;
+  const STEER_RETURN_STEP = 0.02;
+  const GAS_MAX = 1.0;
+  const BRAKE_MAX = 1.0;
+  const STEER_MAX = 0.5;
+  const STEER_MIN = -0.5;
+
+  function updateControls() {
+    if (keysPressed.w) {
+      gas = Math.min(gas + GAS_STEP, GAS_MAX);
+    } else {
+      gas = Math.max(gas - GAS_STEP, 0);
+    }
+
+    if (keysPressed.s) {
+      brake = Math.min(brake + BRAKE_STEP, BRAKE_MAX);
+    } else {
+      brake = Math.max(brake - BRAKE_STEP, 0);
+    }
+
+    if (keysPressed.a && !keysPressed.d) {
+      steer = Math.min(steer + STEER_STEP, STEER_MAX);
+    } else if (keysPressed.d && !keysPressed.a) {
+      steer = Math.max(steer - STEER_STEP, STEER_MIN);
+    } else {
+      if (steer > 0) {
+        steer = Math.max(steer - STEER_RETURN_STEP, 0);
+      } else if (steer < 0) {
+        steer = Math.min(steer + STEER_RETURN_STEP, 0);
+      }
+    }
+
+      console.log("Gas:", gas, "Brake:", brake, "Steer:", steer); // 👈 You add this line
+
+  }
+
+  // Simple car physics update for manual mode
+  function updateCarState(friction, gasSensitivity, brakeSensitivity, steerSensitivity) {
+    // Update velocity: velocity += gas * gasSensitivity - brake * brakeSensitivity - friction * velocity
+    // Clamp velocity >= 0
+
+    const acceleration = gas * gasSensitivity - brake * brakeSensitivity;
+    carState.velocity += acceleration;
+    carState.velocity -= friction * carState.velocity;
+    if (carState.velocity < 0) carState.velocity = 0;
+
+    // Update steering angle
+    carState.steerAngle = steer * steerSensitivity;
+
+    // Update heading based on steer angle and velocity
+    // Simple bicycle model approximation: change heading proportional to steer angle and velocity
+    const turnRate = carState.steerAngle * carState.velocity * 0.1; // 0.1 is a tuning parameter
+    carState.heading += turnRate;
+
+    // Update position
+    carState.x += Math.cos(carState.heading) * carState.velocity * 0.1; // 0.1 scales speed for visualization
+    carState.y += Math.sin(carState.heading) * carState.velocity * 0.1;
+  }
+
+  let manualAnimationInterval = null;
+
+async function startManualSimulation() {
+  // 1) Read controls
+const frictionSlider      = document.getElementById("friction");
+const gasSensSlider       = document.getElementById("gas_sensitivity");
+const brakeSensSlider     = document.getElementById("brake_sensitivity");
+const steerSensSlider     = document.getElementById("steer_sensitivity");
+const pathTypeSelect      = document.getElementById("path_type");
+
+const friction         = parseFloat(frictionSlider.value);
+const gas_sensitivity  = parseFloat(gasSensSlider.value);
+const brake_sensitivity= parseFloat(brakeSensSlider.value);
+const steer_sensitivity= parseFloat(steerSensSlider.value);
+const path_type        = pathTypeSelect.value;
+
+
+  // 2) Initialize server‐side env
+  const res = await fetch("/manual_start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      friction,
+      gas_sensitivity,
+      brake_sensitivity,
+      steer_sensitivity,
+      path_type
+    })
+  });
+  const { observation } = await res.json();
+
+  // 3) Plot initial car position
+  //    (we assume showPathOnly() has already drawn the path & waypoints)
+  Plotly.deleteTraces('plot', 1);
+  Plotly.addTraces('plot', {
+    x: [observation[0]],
+    y: [observation[1]],
+    mode: 'lines+markers',
+    name: 'Car',
+    line: { width: 2 },
+    marker: { size: 6 }
+  });
+
+  // 4) Kick off manual loop
+  if (manualAnimationInterval) clearInterval(manualAnimationInterval);
+  manualAnimationInterval = setInterval(async () => {
+    updateControls();  // this updates your gas/brake/steer globals
+
+    const stepRes = await fetch("/manual_step", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ gas, brake, steer })
+    });
+    const data = await stepRes.json();
+    if (data.error) {
+      console.error(data.error);
+      clearInterval(manualAnimationInterval);
+      return;
+    }
+
+    Plotly.extendTraces('plot', {
+      x: [[data.observation[0]]],
+      y: [[data.observation[1]]]
+    }, [1]);
+
+    if (data.terminated || data.truncated) {
+      clearInterval(manualAnimationInterval);
+      console.log("Manual episode ended");
+    }
+  }, 50);
+}
+
+
+
+  modeToggle.addEventListener('click', () => {
+    if (animationInterval) {
+      clearInterval(animationInterval);
+      animationInterval = null;
+    }
+    if (manualAnimationInterval) {
+      clearInterval(manualAnimationInterval);
+      manualAnimationInterval = null;
+    }
+
+    document.getElementById("spinner").style.display = "none";
+
+    const path_type = document.getElementById("path_type").value;
+    showPathOnly(path_type);
+
+    isManualMode = !isManualMode;
+
+    if (isManualMode) {
+      modeToggle.textContent = '🤖 Auto Mode';
+      simulateBtn.disabled = true;
+      console.log('✅ Manual Mode Activated');
+      startManualSimulation();
+    } else {
+      modeToggle.textContent = '🎮 Manual Mode';
+      simulateBtn.disabled = false;
+      console.log('✅ Auto Mode Activated');
+    }
+  });
+
+  // Simulate function (auto mode)
   async function simulate() {
     if (animationInterval) {
       clearInterval(animationInterval);
       animationInterval = null;
+    }
+    if (manualAnimationInterval) {
+      clearInterval(manualAnimationInterval);
+      manualAnimationInterval = null;
     }
 
     // Disable other controls immediately
@@ -278,6 +463,9 @@ document.getElementById("resetBtn").addEventListener("click", () => {
       idx++;
     }, 50);
   }
+
+  // Initial load
+  showPathOnly(document.getElementById("path_type").value);
 </script>
 </body>
 </html>
