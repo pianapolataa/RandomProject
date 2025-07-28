@@ -4,75 +4,221 @@
   <title>RL Car Simulation</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
+    /* Reset & Base Style */
+    body {
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      color: #333;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+  
     body.dark {
       background: #1e1e1e;
       color: #f5f5f5;
     }
-    body.dark label,
-    body.dark output {
-      color: #f5f5f5;
+  
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: 1.2rem;
     }
-    body.dark #plot {
-      background: #333333;
+  
+    label {
+      display: block;
+      margin-top: 20px;
+      font-size: 0.95rem;
     }
-
+  
+    output {
+      margin-left: 10px;
+      font-weight: 500;
+    }
+  
     #app {
       display: flex;
-      align-items: flex-start;
-      padding: 20px;
+      align-items: center; /* vertically center */
+      height: 90vh;
+      padding: 40px;
+      gap: 40px;
     }
+  
     #controls {
-      width: 300px;
-      padding: 1rem;
+      width: 320px;
+      padding: 2rem;
+      border-radius: 12px;
+      background: #fafafa;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
     }
+  
+    body.dark #controls {
+      background: #2b2b2b;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+  
     #plot {
       width: 700px;
       height: 450px;
-      margin-left: 20px;
+      background: #fff;
+      border-radius: 8px;
     }
-
-    label { display: block; margin-top: 10px; }
-    output { margin-left: 10px; font-weight: bold; }
+  
+    body.dark #plot {
+      background: #333;
+    }
+  
     #themeToggle {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      padding: 6px 12px;
+      top: 20px;
+      right: 20px;
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      background: #e0e0e0;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: background 0.2s;
     }
-    #controls button {
-      margin-top: 15px;
-      margin-right: 5px;
+  
+    body.dark #themeToggle {
+      background: #444;
+      color: #eee;
     }
+  
+    /* Buttons */
+    #controls button,
+    #simulateBtn,
+    #resetBtn {
+      margin-top: 12px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      background-color: #e8f0fe;
+      color: #1967d2;
+      border: 1px solid #c6dafc;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+  
+    #controls button:hover,
+    #simulateBtn:hover,
+    #resetBtn:hover {
+      background-color: #d2e3fc;
+      color: #174ea6;
+    }
+  
+    body.dark #controls button,
+    body.dark #simulateBtn,
+    body.dark #resetBtn {
+      background-color: #3a66d9;
+      color: white;
+      border: none;
+      box-shadow: 0 1px 3px rgba(66,133,244,0.6);
+    }
+  
+    body.dark #controls button:hover,
+    body.dark #simulateBtn:hover,
+    body.dark #resetBtn:hover {
+      background-color: #557ee6;
+    }
+  
+    /* Manual Mode Toggle */
+    #modeToggle {
+      background-color: #455a64;
+      padding: 6px 10px;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+  
+    #modeToggle:hover {
+      background-color: #37474f;
+    }
+  
+    body.dark #modeToggle {
+      background-color: #2f4f6f;
+      box-shadow: 0 1px 3px rgba(66,133,244,0.8);
+    }
+  
+    body.dark #modeToggle:hover {
+      background-color: #3f6fcf;
+    }
+  
+    /* Select dropdown styling */
+    select#path_type {
+      width: 100%;
+      padding: 6px 10px;
+      margin-top: 6px;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background: white;
+      color: #333;
+      cursor: pointer;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      appearance: none; /* remove default arrow for better styling */
+      background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='12' viewBox='0 0 24 24' width='12' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 12px 12px;
+    }
+  
+    select#path_type:focus {
+      outline: none;
+      border-color: #1967d2;
+      box-shadow: 0 0 0 3px rgba(25,103,210,0.3);
+    }
+  
+    body.dark select#path_type {
+      background: #2b2b2b;
+      color: #eee;
+      border: 1px solid #555;
+      appearance: none; /* remove default arrow for better styling */
+      background-image: url("data:image/svg+xml;utf8,<svg fill='lightgray' height='12' viewBox='0 0 24 24' width='12' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 12px 12px;
+    }
+  
+    body.dark select#path_type:focus {
+      border-color: #557ee6;
+      box-shadow: 0 0 0 3px rgba(85,126,230,0.5);
+    }
+  
     #manualControlsInfo {
       display: none;
-      margin-top: 15px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      background: #f9f9f9;
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f1f1f1;
       color: #333;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
+  
     body.dark #manualControlsInfo {
-      background: #2a2a2a;
+      background: #3a3a3a;
       color: #f5f5f5;
-      border-color: #555;
     }
+  
     #penaltyMessage {
       display: none;
-      margin-top: 10px;
-      padding: 8px 10px;
-      border-radius: 6px;
-      background: #fff6f6;
-      color: #a40000;
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #ffecec;
+      color: #b00020;
       font-weight: bold;
+      font-size: 0.9rem;
     }
     body.dark #penaltyMessage {
-      background: #3a2020;
+      background: #4c2c2c;
       color: #ffb3b3;
     }
-  </style>
+  </style>  
 </head>
 <body>
   <button id="themeToggle">🌙 Dark Mode</button>
@@ -371,15 +517,16 @@
     });
     const { observation } = await res.json();
 
-    Plotly.deleteTraces('plot', 1);
-    Plotly.addTraces('plot', {
-      x: [observation[0]],
-      y: [observation[1]],
+    // Instead of deleting and adding, just update the car trace data to initial point
+    Plotly.update('plot', {
+      x: [[observation[0]]],
+      y: [[observation[1]]]
+    }, {
       mode: 'lines+markers',
-      name: 'Car',
-      line: { width: 2 },
-      marker: { size: 6 }
-    });
+      line: { color: 'blue', width: 2 },
+      marker: { color: 'blue', size: 6 }
+    }, [1]);
+
 
     if (manualAnimationInterval) clearInterval(manualAnimationInterval);
     manualAnimationInterval = setInterval(async () => {
