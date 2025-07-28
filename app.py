@@ -163,7 +163,7 @@ def manual_step():
         "truncated": bool(truncated),
         "done": bool(done),
         "cumulative_reward": float(manual_episode_return),
-        "penalty": float(-manual_episode_return)
+        "penalty": float(manual_episode_return)
     }
 
     return jsonify(response)

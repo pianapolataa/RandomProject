@@ -419,7 +419,7 @@
           const penalty = data.penalty;
           const ret = data.cumulative_reward;
           penaltyMessage.textContent =
-            `Manual episode finished. Penalty: ${penalty.toFixed(2)}`;
+            `Manual episode finished. Your score: ${penalty.toFixed(2)}`;
         }
       }
 
@@ -513,7 +513,7 @@
       if (typeof data.penalty !== "undefined") {
         penaltyMessage.style.display = 'block';
         penaltyMessage.textContent =
-          `Auto run finished. Penalty: ${data.penalty.toFixed(2)}`;
+          `Auto run finished. Computer's score: ${data.penalty.toFixed(2)}`;
       } else {
         penaltyMessage.style.display = 'none';
         penaltyMessage.textContent = '';
