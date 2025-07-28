@@ -3,12 +3,16 @@ from stable_baselines3 import SAC
 from path_env import CarPathEnv, generate_sine_path, generate_straight_path, generate_alternating_path
 import numpy as np
 import os
+
 manual_env = None  # Global environment instance for manual control
+manual_episode_return = 0.0  # Track cumulative reward for manual mode
 
 app = Flask(__name__, static_folder="static")
 
 # Preload the model
 model = SAC.load("car_path_sac_model_BEST.zip")
+
+
 @app.route("/get_path", methods=["POST"])
 def get_path():
     data = request.json
@@ -35,9 +39,11 @@ def get_path():
         "waypoints": waypoints_serializable
     })
 
+
 @app.route("/")
 def serve_index():
     return send_from_directory(app.static_folder, "index.html")
+
 
 @app.route("/simulate", methods=["POST"])
 def simulate():
@@ -79,9 +85,11 @@ def simulate():
         steps = 150
 
     car_positions = []
+    total_penalty = 0.0
     for _ in range(steps):
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, _ = env.step(action)
+        total_penalty += reward  # Accumulate rewards (penalty)
         car_positions.append([obs[0], obs[1]])
         if terminated or truncated:
             break
@@ -89,12 +97,14 @@ def simulate():
     return jsonify({
         "car": [[float(x), float(y)] for x, y in car_positions],
         "path": [[float(x), float(y)] for x, y in path],
-        "waypoints": [[float(x), float(y)] for x, y in waypoints]
+        "waypoints": [[float(x), float(y)] for x, y in waypoints],
+        "penalty": float(total_penalty)
     })
+
 
 @app.route("/manual_start", methods=["POST"])
 def manual_start():
-    global manual_env
+    global manual_env, manual_episode_return
     data = request.json
     friction = data.get("friction", 0.7)
     path_type = data.get("path_type", "sine")
@@ -118,15 +128,17 @@ def manual_start():
         random_start=False
     )
     obs, _ = manual_env.reset()
+    manual_episode_return = 0.0  # Reset cumulative reward
 
     return jsonify({
         "observation": obs.tolist(),
         "path": [[float(x), float(y)] for x, y in path]
     })
 
+
 @app.route("/manual_step", methods=["POST"])
 def manual_step():
-    global manual_env
+    global manual_env, manual_episode_return
     if manual_env is None:
         return jsonify({"error": "Manual environment not initialized. Call /manual_start first."}), 400
 
@@ -141,12 +153,21 @@ def manual_step():
 
     obs, reward, terminated, truncated, info = manual_env.step([gas, brake, steer])
 
-    return jsonify({
+    manual_episode_return += reward
+    done = terminated or truncated or (obs[0] > 50)
+
+    response = {
         "observation": obs.tolist(),
-        "reward": reward,
-        "terminated": terminated,
-        "truncated": truncated
-    })
+        "reward": float(reward),
+        "terminated": bool(terminated),
+        "truncated": bool(truncated),
+        "done": bool(done),
+        "cumulative_reward": float(manual_episode_return),
+        "penalty": float(-manual_episode_return)
+    }
+
+    return jsonify(response)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
