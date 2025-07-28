@@ -6,7 +6,7 @@ import os
 
 manual_env = None  # Global environment instance for manual control
 manual_episode_return = 0.0  # Track cumulative reward for manual mode
-
+max_x = 50.0
 app = Flask(__name__, static_folder="static")
 
 # Preload the model
@@ -104,7 +104,7 @@ def simulate():
 
 @app.route("/manual_start", methods=["POST"])
 def manual_start():
-    global manual_env, manual_episode_return
+    global manual_env, manual_episode_return, max_x
     data = request.json
     friction = data.get("friction", 0.7)
     path_type = data.get("path_type", "sine")
@@ -114,11 +114,13 @@ def manual_start():
 
     if path_type == "sine":
         path = generate_sine_path()
+        max_x=50
     elif path_type == "alternating":
         path = generate_alternating_path()
+        max_x=200
     else:
         path = [(x, 0) for x in np.linspace(0, 50, 100)]
-
+        max_x=50
     manual_env = CarPathEnv(
         path=path,
         friction=friction,
@@ -138,7 +140,7 @@ def manual_start():
 
 @app.route("/manual_step", methods=["POST"])
 def manual_step():
-    global manual_env, manual_episode_return
+    global manual_env, manual_episode_return,max_x
     if manual_env is None:
         return jsonify({"error": "Manual environment not initialized. Call /manual_start first."}), 400
 
@@ -154,7 +156,7 @@ def manual_step():
     obs, reward, terminated, truncated, info = manual_env.step([gas, brake, steer])
 
     manual_episode_return += reward
-    done = terminated or truncated or (obs[0] > 50)
+    done = terminated or truncated or obs[0]>max_x
 
     response = {
         "observation": obs.tolist(),

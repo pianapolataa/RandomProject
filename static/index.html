@@ -408,8 +408,7 @@
         y: [[data.observation[1]]]
       }, [1]);
 
-      // Use server-side flag (preferred) or fallback to x>50
-      if (data.done || data.terminated || data.truncated || carState.x > 50) {
+      if (data.done || data.terminated || data.truncated) {
         clearInterval(manualAnimationInterval);
         console.log("✅ Manual episode ended (auto-stop)");
 
