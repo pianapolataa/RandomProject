@@ -123,7 +123,23 @@
     body.dark #resetBtn:hover {
       background-color: #5171c2;
     }
-  
+
+    /* Visually disabled simulate button */
+    #simulateBtn:disabled {
+      background-color: #ddd;
+      color: #999;
+      border: 1px solid #ccc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Dark mode version of disabled simulate button */
+    body.dark #simulateBtn:disabled {
+      background-color: #444;
+      color: #777;
+      border: 1px solid #555;
+    }
+    
     /* Manual Mode Toggle */
     #modeToggle {
       background-color: #455a64;
