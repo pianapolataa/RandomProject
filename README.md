@@ -11,7 +11,7 @@ The backend is powered by Stable-Baselines3 (SAC), and the frontend is a lightwe
 
 ---
 
-## 🌐 Features
+## Features
 
 ### Core Functionality
 
@@ -29,7 +29,7 @@ The backend is powered by Stable-Baselines3 (SAC), and the frontend is a lightwe
 
 ---
 
-## 🧩 UI Controls
+## UI Controls
 
 - **Parameter Sliders**:
   - Friction
