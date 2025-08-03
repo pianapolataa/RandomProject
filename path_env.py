@@ -146,8 +146,8 @@ class CarPathEnv(gym.Env):
 
         self.prev_closest_wp = closest_wp
 
-        terminated = bool(self.dist_to_path > 20.0)
-        steps = 300
+        terminated = bool(self.dist_to_path > 40.0)
+        steps = 600
         if self.path_type == "alternating":
             steps = 1000
         elif self.path_type == "straight":
