@@ -4,8 +4,13 @@ from path_env import CarPathEnv, generate_sine_path, generate_straight_path, gen
 import numpy as np
 import os
 from threading import Lock
+from multiprocessing import Process, Value
+import ctypes
 
 app = Flask(__name__, static_folder="static")
+
+# Shared flag to prevent concurrent training
+training_in_progress = Value(ctypes.c_bool, False)
 
 # Global environment instance for manual control
 manual_env = None
@@ -209,32 +214,57 @@ def load_model():
     except Exception as e:
         return jsonify({"error": f"Failed to load model: {str(e)}"}), 500
 
-
 @app.route("/retrain_model", methods=["POST"])
 def retrain_model():
-    global current_model
+    if training_in_progress.value:
+        return jsonify({"message": "Training already in progress."}), 202
+
     data = request.json
-    friction = data.get("friction", 0.7)
-    path_type = data.get("path_type", "sine")
-    gas_sensitivity = data.get("gas_sensitivity", 0.9)
-    brake_sensitivity = data.get("brake_sensitivity", 0.4)
-    steer_sensitivity = data.get("steer_sensitivity", 0.1)
-    env2 = CarPathEnv(path=path_type, friction=friction, gas_sensitivity=gas_sensitivity, brake_sensitivity=brake_sensitivity, steer_sensitivity=
-        steer_sensitivity, random_start=True)
+    Process(target=retrain_model_background, args=(data,)).start()
+    return jsonify({"message": "Training started."}), 202
 
-    model = SAC("MlpPolicy", env2, learning_rate=1e-3, verbose=1, tensorboard_log="./car_rl_logs/")
-    model.learn(total_timesteps=100000)
 
-    model.save("model_temp")
-    if not os.path.exists(temp_model_path):
-        return jsonify({"error": f"{temp_model_path} not found"}), 400
+def retrain_model_background(data):
+    global current_model
+    training_in_progress.value = True
 
     try:
+        friction = data.get("friction", 0.7)
+        path_type = data.get("path_type", "sine")
+        gas_sensitivity = data.get("gas_sensitivity", 0.9)
+        brake_sensitivity = data.get("brake_sensitivity", 0.4)
+        steer_sensitivity = data.get("steer_sensitivity", 0.1)
+
+        def make_env():
+            return CarPathEnv(
+                path=path_type,
+                friction=friction,
+                gas_sensitivity=gas_sensitivity,
+                brake_sensitivity=brake_sensitivity,
+                steer_sensitivity=steer_sensitivity,
+                random_start=True
+            )
+
+        from stable_baselines3.common.vec_env import DummyVecEnv
+        vec_env = DummyVecEnv([make_env])
+
+        model = SAC("MlpPolicy", vec_env, learning_rate=1e-3, verbose=1, tensorboard_log="./car_rl_logs/")
+        model.learn(total_timesteps=100000)
+        model.save("model_temp.zip")
+
         with model_lock:
-            current_model = SAC.load(temp_model_path)
-        return jsonify({"message": "New model loaded successfully."})
+            current_model = SAC.load("model_temp.zip")
+
+        print("✅ Training complete and model loaded.")
     except Exception as e:
-        return jsonify({"error": f"Failed to load model: {str(e)}"}), 500
+        print(f"❌ Training failed: {e}")
+    finally:
+        training_in_progress.value = False
+
+
+@app.route("/training_status", methods=["GET"])
+def training_status():
+    return jsonify({"training": training_in_progress.value})
 
 
 if __name__ == "__main__":
