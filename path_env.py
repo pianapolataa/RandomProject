@@ -37,18 +37,22 @@ class CarPathEnv(gym.Env):
         self.brake_sensitivity = brake_sensitivity
         self.steer_sensitivity = steer_sensitivity
         self.random_start = random_start
-
+        print("line 40", path)
         # ==== Path ====
         if path == 'alternating':
             self.path = generate_alternating_path()
             self.num_waypoints = 10 
-        elif path is None:
+        elif path == 'sine':
             self.path = generate_sine_path()
             self.num_waypoints = 5 
+        elif path == 'straight':
+            self.path = generate_straight_path()  # Assume it's a custom list of waypoints
+            self.num_waypoints = 5
         else:
             self.path = path  # Assume it's a custom list of waypoints
             self.num_waypoints = 5
 
+        print("line 55", path)
         # ==== Action Space ====
         self.action_space = spaces.Box(
             low=np.array([0.0, 0.0, -1.0]),
