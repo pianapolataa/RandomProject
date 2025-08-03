@@ -52,7 +52,7 @@ The backend is powered by Stable-Baselines3 (SAC), and the frontend is a lightwe
 
 ---
 
-## 🚀 Setup Instructions
+## Setup Instructions
 
 ### 1. Install Dependencies
 
