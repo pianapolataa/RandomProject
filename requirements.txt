@@ -1,0 +1,6 @@
+Flask
+numpy
+gymnasium
+matplotlib
+stable-baselines3[extra]
+torch
