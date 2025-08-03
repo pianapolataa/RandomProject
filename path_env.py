@@ -38,6 +38,7 @@ class CarPathEnv(gym.Env):
         self.steer_sensitivity = steer_sensitivity
         self.random_start = random_start
         print("line 40", path)
+        self.path_type = path
         # ==== Path ====
         if path == 'alternating':
             self.path = generate_alternating_path()
@@ -146,7 +147,13 @@ class CarPathEnv(gym.Env):
         self.prev_closest_wp = closest_wp
 
         terminated = bool(self.dist_to_path > 20.0)
-        truncated = bool(self.step_count >= 1000)
+        steps = 220
+        if self.path_type == "alternating":
+            steps = 1000
+        elif self.path_type == "straight":
+            steps = 150
+        # print(self.path)
+        truncated = bool(self.step_count >= steps)
 
         info = {}
 
