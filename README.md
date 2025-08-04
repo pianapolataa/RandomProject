@@ -48,11 +48,12 @@ This will launch the interactive simulation interface.
 
 This project uses:
 
-- **Flask** – for the backend server  
-- **gymnasium** – custom OpenAI Gym-compatible environment  
-- **numpy**, **matplotlib** – math and plotting utilities  
-- **stable-baselines3[sac]** – reinforcement learning algorithm  
-- *(optional)* **torch** and **tensorboard** – for model training and debugging  
+- **Flask** – backend web server framework  
+- **stable-baselines3** – reinforcement learning algorithms (SAC)  
+- **gymnasium** – custom environment compatibility (make sure your `path_env.py` follows gymnasium API)  
+- **numpy** – numerical computations  
+- **matplotlib** – plotting utilities  
+- **multiprocessing** – for parallel training processes (built-in Python module) 
 
 ---
 
