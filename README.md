@@ -6,8 +6,6 @@ This project is an interactive web-based simulation for a reinforcement learning
 
 ## Features
 
-### Core Functionality
-
 - **Path Simulation**  
   Visualize the car's path-following behavior using a pre-trained SAC model on a sine wave path, a straight path, and an alternating curve consisting of a combination of sine and straight patterns
 
@@ -29,17 +27,6 @@ This project is an interactive web-based simulation for a reinforcement learning
 ```bash
 pip install -r requirements.txt
 ```
-
-## Dependencies
-
-This project uses:
-
-- **Flask** – for the backend server  
-- **gymnasium** – custom OpenAI Gym-compatible environment  
-- **numpy**, **matplotlib** – math and plotting utilities  
-- **stable-baselines3[sac]** – reinforcement learning algorithm  
-- *(optional)* **torch** and **tensorboard** – for model training and debugging  
-
 ---
 
 ### 2. Run the Server
@@ -55,6 +42,17 @@ http://localhost:5000
 ```
 
 This will launch the interactive simulation interface.
+
+---
+## Dependencies
+
+This project uses:
+
+- **Flask** – for the backend server  
+- **gymnasium** – custom OpenAI Gym-compatible environment  
+- **numpy**, **matplotlib** – math and plotting utilities  
+- **stable-baselines3[sac]** – reinforcement learning algorithm  
+- *(optional)* **torch** and **tensorboard** – for model training and debugging  
 
 ---
 
