@@ -1,4 +1,4 @@
-# Reinforcement Learning Car Simulator
+# Interactive Car Simulator
 
 This project is an interactive web-based simulation for a reinforcement learning (RL)-trained car agent to follow a specified path. 
 
