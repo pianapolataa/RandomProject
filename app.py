@@ -23,15 +23,6 @@ model_path = "car_path_sac_model_BEST.zip"
 temp_model_path = "model_temp.zip"
 current_model = SAC.load(model_path)
 
-# Attempt to load temp model if available
-if os.path.exists(temp_model_path):
-    try:
-        current_model = SAC.load(temp_model_path)
-        print("Loaded model_temp.zip instead of default.")
-    except Exception as e:
-        print(f"Failed to load model_temp.zip: {e}")
-
-
 @app.route("/get_path", methods=["POST"])
 def get_path():
     data = request.json
