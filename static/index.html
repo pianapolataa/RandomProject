@@ -139,7 +139,7 @@
       color: #777;
       border: 1px solid #555;
     }
-    
+
     /* Manual Mode Toggle */
     #modeToggle {
       background-color: #455a64;
@@ -243,12 +243,12 @@
       <h2>Car Simulator</h2>
 
       <label>Friction:
-        <input type="range" id="friction" min="0" max="1.0" step="0.01" value="0.7" oninput="fDisplay.value = friction.value">
+        <input type="range" id="friction" min="0.4" max="0.8" step="0.01" value="0.7" oninput="fDisplay.value = friction.value">
         <output id="fDisplay">0.7</output>
       </label>
 
       <label>Gas Sensitivity:
-        <input type="range" id="gas_sensitivity" min="0" max="2.0" step="0.01" value="0.9" oninput="gDisplay.value = gas_sensitivity.value">
+        <input type="range" id="gas_sensitivity" min="0.8" max="1.4" step="0.01" value="0.9" oninput="gDisplay.value = gas_sensitivity.value">
         <output id="gDisplay">0.9</output>
       </label>
 
